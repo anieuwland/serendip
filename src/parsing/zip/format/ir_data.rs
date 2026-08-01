@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use log::warn;
+use log::{debug, warn};
 use zerocopy::FromBytes;
 use zerocopy::byteorder::little_endian::U16;
 
 use crate::parsing::zip::format::image_properties::extract_dimensions_from_properties;
 
+#[derive(Clone, Debug)]
 pub struct IrData {
     /// The raw bytes in the file. You probably want `as_u16`.
     pub raw: Vec<u8>,
@@ -30,7 +31,7 @@ impl IrData {
 
     pub fn body(&self) -> &[U16] {
         let header = usize::from(self.width);
-        println!("IR data size: {:?} {:?}", self.width, self.height);
+        debug!("IR data size: {:?} {:?}", self.width, self.height);
         let size = usize::from(self.width) * usize::from(self.height);
         &self.as_u16()[header..header + size]
     }

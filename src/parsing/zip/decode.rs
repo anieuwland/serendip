@@ -9,11 +9,12 @@ use crate::parsing::zip::format::{
     extract_camera_info, extract_ir_data, extract_ir_dimensions, extract_ir_image_info,
 };
 
+#[derive(Clone, Debug)]
 pub struct SerendipZip  {
-    ir_data: IrData,
-    ir_image_info: IrImageInfo,
-    camera_info: CameraInfo,
-    calibration_data: CalibrationData,
+    pub ir_data: IrData,
+    pub ir_image_info: IrImageInfo,
+    pub camera_info: CameraInfo,
+    pub calibration_data: CalibrationData,
 }
 
 impl SerendipZip {
