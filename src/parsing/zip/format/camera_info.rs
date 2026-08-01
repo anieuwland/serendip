@@ -30,3 +30,31 @@ pub fn extract_camera_info(files: &HashMap<String, Vec<u8>>) -> Option<CameraInf
         .inspect_err(|e| warn!("Could not decode {CAMERA_INFO_FILE}: {e}"))
         .ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decodes_ti400_sample() {
+        let bytes = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/thermograms/fluke_ti400_1/CameraInfo.gpbenc"
+        ))
+        .expect("sample file present");
+        let files = HashMap::from([(CAMERA_INFO_FILE.to_string(), bytes)]);
+
+        let info = extract_camera_info(&files).expect("decodes");
+
+        assert_eq!(info.vl_width, 2560);
+        assert_eq!(info.vl_height, 1920);
+        assert_eq!(info.manufacturer, "Fluke Thermography");
+        assert_eq!(info.engine_serial, "G13080059");
+        assert_eq!(info.camera_serial, "M13080110");
+    }
+
+    #[test]
+    fn absent_file_yields_none() {
+        assert_eq!(extract_camera_info(&HashMap::new()), None);
+    }
+}
