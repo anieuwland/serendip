@@ -5,12 +5,14 @@ use log::debug;
 use zip::ZipArchive;
 
 use crate::parsing::zip::format::{
-    IrData, IrImageInfo, extract_ir_data, extract_ir_dimensions, extract_ir_image_info,
+    CameraInfo, IrData, IrImageInfo, extract_camera_info, extract_ir_data, extract_ir_dimensions,
+    extract_ir_image_info,
 };
 
 pub struct SerendipZip  {
     ir_data: IrData,
     ir_image_info: IrImageInfo,
+    camera_info: CameraInfo,
 }
 
 impl SerendipZip {
@@ -27,8 +29,10 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
     debug!("Dimensions: {width} x {height}");
     let ir_image_info = extract_ir_image_info(&files)?;
     debug!("IRImageInfo: {ir_image_info:?}");
+    let camera_info = extract_camera_info(&files)?;
+    debug!("CameraInfo: {camera_info:?}");
     let ir_data = extract_ir_data(&mut files, width, height)?;
-    Some(SerendipZip { ir_data, ir_image_info })
+    Some(SerendipZip { ir_data, ir_image_info, camera_info })
 }
 
 fn unzip(bytes: &[u8]) -> zip::result::ZipResult<HashMap<String, Vec<u8>>> {
