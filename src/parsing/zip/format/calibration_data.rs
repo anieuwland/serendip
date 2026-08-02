@@ -63,7 +63,7 @@ pub struct CalibrationBand {
 impl CalibrationBand {
     pub fn to_raw_band(&self) -> [f32; 5] {
         let from = self.a * self.from * self.from + self.b * self.from + self.c;
-        let to =  self.a * self.to * self.to + self.b * self.to + self.c;
+        let to = self.a * self.to * self.to + self.b * self.to + self.c;
         [from, to, self.a, self.b, self.c]
     }
 }

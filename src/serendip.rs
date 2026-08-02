@@ -1,8 +1,8 @@
 use std::io;
 use std::path::Path;
 
-pub mod parsing;
 pub mod markers;
+pub mod parsing;
 
 use parsing::zip::SerendipZip;
 use parsing::{decode_blob_format, decode_zip_format};
@@ -41,13 +41,13 @@ impl SerendipThermogram {
 
     pub fn width(&self) -> u16 {
         match self {
-            Zip(t) => t.ir_data.width,
+            Zip(t) => t.width(),
         }
     }
 
     pub fn height(&self) -> u16 {
         match self {
-            Zip(t) => t.ir_data.height,
+            Zip(t) => t.height(),
         }
     }
 }

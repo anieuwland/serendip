@@ -11,6 +11,7 @@ Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/e
 ## Supported cameras
 
 * Ti400, Ti401p
+* TiS75+
 
 _**Request for help**_: Please share any is2 files of cameras not listed above so 
 this library can be tested against them and be improved.

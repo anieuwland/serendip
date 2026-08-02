@@ -1,5 +1,3 @@
-
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Marker {
     Point {

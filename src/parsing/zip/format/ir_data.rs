@@ -4,7 +4,8 @@ use log::{debug, warn};
 use zerocopy::FromBytes;
 use zerocopy::byteorder::little_endian::U16;
 
-use crate::parsing::zip::format::image_properties::extract_dimensions_from_properties;
+use crate::parsing::zip::format::IrImageInfo;
+use crate::parsing::zip::format::calibration_data::CalibrationCurve;
 
 #[derive(Clone, Debug)]
 pub struct IrData {
@@ -35,6 +36,37 @@ impl IrData {
         let size = usize::from(self.width) * usize::from(self.height);
         &self.as_u16()[header..header + size]
     }
+
+    /// Converts classic-family raw counts to kelvin: the calibration curve
+    /// yields an apparent temperature, then emissivity, background
+    /// temperature and transmission correct for real-world radiation.
+    pub fn kelvin(&self, params: &IrImageInfo, curve: &CalibrationCurve) -> Option<Vec<f32>> {
+        let raw_bands = curve.get_raw_bands();
+        let raw_data = self.body();
+
+        let kelvin = raw_data.iter().map(|raw| {
+            let raw = f32::from(raw.get());
+            let maybe_band = raw_bands.iter().find(|b| (b[0]..b[1]).contains(&raw));
+            match maybe_band {
+                Some(band) => {
+                    let a = band[2];
+                    let b = band[3];
+                    let c = band[4];
+
+                    let apparent_temp = (-b + f32::sqrt(b * b - 4.0 * a * (c - raw))) / (2.0 * a);
+                    let apparent_temp = apparent_temp + 273.15;
+
+                    let term1 = apparent_temp.powi(4)
+                        - (1.0 - params.emissivity) * params.background_temperature.powi(4);
+                    let term2 = params.transmission * params.emissivity;
+                    (term1 / term2).powf(0.25)
+                }
+                None => f32::NAN,
+            }
+        });
+
+        Some(kelvin.collect())
+    }
 }
 
 const IR_DATA_FILE: &'static str = "Images/Main/IR.data";
@@ -43,15 +75,22 @@ const IR_DATA_FILE: &'static str = "Images/Main/IR.data";
 /// authority. Candidates are only accepted if they satisfy IR.data's length
 /// equation (see `dimensions_fit_ir_data`).
 ///
-/// 1. `ImageProperties.json` (`IRPROP_IR_SENSOR_WIDTH` / `..HEIGHT`).
-///    Not always present.
+/// 1. `IRImageInfo.gpbenc`'s stored dimensions (see
+///    `IrImageInfo::stored_thermal_dimensions`), whose height includes
+///    IR.data's one header row, subtracted here.
 /// 2. `IR.data`'s own header: u32 LE fields at byte offsets 182 (width - 1)
 ///    and 186 (height - 1). Verified on Ti400 samples only.
-pub fn extract_ir_dimensions(files: &HashMap<String, Vec<u8>>) -> Option<(u16, u16)> {
+pub fn extract_ir_dimensions(
+    files: &HashMap<String, Vec<u8>>,
+    ir_image_info: &IrImageInfo,
+) -> Option<(u16, u16)> {
     let ir_data = files.get(IR_DATA_FILE)?;
 
+    let without_header_row = |(w, h): (u16, u16)| Some((w, h.checked_sub(1)?));
     let candidates = [
-        extract_dimensions_from_properties(files),
+        ir_image_info
+            .stored_thermal_dimensions()
+            .and_then(without_header_row),
         extract_dimensions_from_ir_data_header(ir_data),
     ];
     candidates
@@ -89,7 +128,7 @@ fn extract_dimensions_from_ir_data_header(ir_data: &[u8]) -> Option<(u16, u16)> 
 
 /// Extracts the infrared data from the hash map.
 ///
-/// The frame dimensions come from `ImageProperties.json` (see
+/// The frame dimensions come from `IRImageInfo.gpbenc` (see
 /// `extract_ir_dimensions`), since `IR.data` itself has no reliable header
 /// fields for them. They are verified here against the file's length:
 /// a header of `width` u16s followed by a `width * height` u16 payload.

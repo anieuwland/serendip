@@ -13,9 +13,9 @@ const IR_IMAGE_INFO_FILE: &'static str = "Images/Main/IRImageInfo.gpbenc";
 #[derive(Clone, PartialEq, Message)]
 pub struct IrImageInfo {
     #[prost(uint32, tag = "4")]
-    pub width: u32, // Blended image width? Not IR width
+    pub width: u32, // Unclear what coordinate space; not 1-to-1 IR data size
     #[prost(uint32, tag = "5")]
-    pub height: u32, // Blended image height? Not IR height
+    pub height: u32, // Unclear what coordinate space; not 1-to-1 IR data size
     #[prost(float, tag = "10")]
     pub emissivity: f32,
     #[prost(float, tag = "11")]
@@ -24,6 +24,23 @@ pub struct IrImageInfo {
     pub transmission: f32,
     #[prost(message, optional, tag = "14")]
     pub scale: Option<TemperatureScale>,
+}
+
+impl IrImageInfo {
+    /// The dimensions of the thermal data as stored: half this struct's
+    /// width/height fields.
+    ///
+    /// On all samples seen those fields are exactly twice the stored
+    /// thermal data size. For `IR.data` that includes its one header row
+    /// (Ti400: 640 × 482 → 320 × 241 = 320 × (240 + 1)); for
+    /// `CalTempDataRex.gpbenc` it is the pixel data itself (TiS75+:
+    /// 768 × 576 → 384 × 288). Callers must verify the result against
+    /// their file's actual length.
+    pub fn stored_thermal_dimensions(&self) -> Option<(u16, u16)> {
+        let width = u16::try_from(self.width / 2).ok()?;
+        let height = u16::try_from(self.height / 2).ok()?;
+        Some((width, height))
+    }
 }
 
 /// The temperature range of the display palette, presumably Celsius.
