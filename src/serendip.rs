@@ -33,7 +33,7 @@ impl SerendipThermogram {
     }
 
     pub fn kelvin(&self) -> Option<Vec<f32>> {
-        match (self) {
+        match self {
             Zip(t) => t.kelvin(),
         }
     }
