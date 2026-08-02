@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use log::warn;
+
 use crate::parsing::zip::format::image_properties::extract_dimensions_from_properties;
 
 pub struct IrData {
@@ -83,14 +85,14 @@ pub fn extract_ir_data(
     let size = width as usize * height as usize;
     let length_u16 = data.len() / 2;
     if header + size != length_u16 {
-        println!(
+        warn!(
             "IR data of wrong size! Expected {:?} = {:?} + {:?} but got {:?}",
             header + size,
             header,
             size,
             length_u16
         );
-        println!("Width: {:?};  height: {:?}:", width, height);
+        warn!("Width: {:?};  height: {:?}:", width, height);
         return None;
     };
 

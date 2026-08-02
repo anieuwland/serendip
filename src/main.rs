@@ -4,6 +4,8 @@ use std::process::ExitCode;
 use serendip::SerendipThermogram;
 
 fn main() -> ExitCode {
+    env_logger::init();
+
     let mut args = std::env::args();
     let _ = args.next();
 
