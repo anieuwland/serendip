@@ -1,7 +1,12 @@
 [package]
 name = "serendip"
+description = "Read Fluke is2 thermal imagery. Extract the thermal data and convert to kelvin."
 version = "0.1.0"
+authors = ["Arthur Nieuwland <anieuwland@nimmerfort.eu>"]
 edition = "2024"
+license = "EUPL-1.2"
+repository = "https://bitbucket.org/nimmerwoner/flyr-rs/src/master/"
+exclude = ["thermograms/"]
 
 [lib]
 name = "serendip"
