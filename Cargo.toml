@@ -5,7 +5,7 @@ version = "0.1.0"
 authors = ["Arthur Nieuwland <anieuwland@nimmerfort.eu>"]
 edition = "2024"
 license = "EUPL-1.2"
-repository = "https://bitbucket.org/nimmerwoner/flyr-rs/src/master/"
+repository = "https://github.com/anieuwland/serendip/"
 exclude = ["thermograms/"]
 
 [lib]
