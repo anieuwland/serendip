@@ -4,10 +4,13 @@ use std::io::{Cursor, Read};
 use log::debug;
 use zip::ZipArchive;
 
-use crate::parsing::zip::format::{IrData, extract_ir_data, extract_ir_dimensions};
+use crate::parsing::zip::format::{
+    IrData, IrImageInfo, extract_ir_data, extract_ir_dimensions, extract_ir_image_info,
+};
 
 pub struct SerendipZip  {
-    ir_data: IrData
+    ir_data: IrData,
+    ir_image_info: IrImageInfo,
 }
 
 impl SerendipZip {
@@ -22,8 +25,10 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
     let mut files = unzip(bytes).ok()?;
     let (width, height) = extract_ir_dimensions(&files)?;
     debug!("Dimensions: {width} x {height}");
+    let ir_image_info = extract_ir_image_info(&files)?;
+    debug!("IRImageInfo: {ir_image_info:?}");
     let ir_data = extract_ir_data(&mut files, width, height)?;
-    Some(SerendipZip { ir_data })
+    Some(SerendipZip { ir_data, ir_image_info })
 }
 
 fn unzip(bytes: &[u8]) -> zip::result::ZipResult<HashMap<String, Vec<u8>>> {
