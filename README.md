@@ -22,6 +22,25 @@ this library can be tested against them and be improved.
 * [ ] Expose markers
 * [ ] CLI to export temperatures to file
 
+## Example
+
+```rust
+use serendip::SerendipThermogram::{self, Zip};
+
+let file_path = "thermograms/fluke_ti400_1.is2"
+match SerendipThermogram::new_from_path(Path::new(&file_path)) {
+    Ok(Zip(thermogram)) => {
+        println!("Successfully decoded thermogram from {file_path}");
+        println!("{:?}", thermogram.kelvin()); // Use however you want
+        ExitCode::SUCCESS
+    }
+    Err(e) => {
+        eprintln!("Failed to decode {file_path}: {e}");
+        ExitCode::FAILURE
+    }
+}
+```
+
 ## Prior art
 
 * **[fluke-thermal-reader](https://github.com/LoriGH25/Fluke-Thermal-Reader_Python)**. A Python library ([on PyPI](https://pypi.org/project/fluke-thermal-reader/)) for reading `.is2` files, with partial `.is3` (video) support. 
