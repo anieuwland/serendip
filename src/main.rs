@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-use serendip::SerendipThermogram;
+use serendip::SerendipThermogram::{self, Zip};
 
 fn main() -> ExitCode {
     env_logger::init();
@@ -15,7 +15,7 @@ fn main() -> ExitCode {
     };
 
     match SerendipThermogram::new_from_path(Path::new(&file_path)) {
-        Ok(_thermogram) => {
+        Ok(Zip(_thermogram)) => {
             println!("Successfully decoded thermogram from {file_path}");
             ExitCode::SUCCESS
         }

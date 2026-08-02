@@ -1,13 +1,39 @@
 use std::collections::HashMap;
 
 use log::warn;
+use zerocopy::FromBytes;
+use zerocopy::byteorder::little_endian::U16;
 
 use crate::parsing::zip::format::image_properties::extract_dimensions_from_properties;
 
 pub struct IrData {
-    pub data: Vec<u8>,
+    /// The raw bytes in the file. You probably want `as_u16`.
+    pub raw: Vec<u8>,
     pub width: u16,
     pub height: u16,
+}
+
+impl IrData {
+    /// Returns the raw data as the little endian u16s it actually is.
+    ///
+    /// Includes header and body, which are also available through convenience
+    /// functions.
+    pub fn as_u16(&self) -> &[U16] {
+        <[U16]>::ref_from_bytes(&self.raw).expect("length verified at construction")
+    }
+
+    #[allow(dead_code)]
+    pub fn header(&self) -> &[U16] {
+        let header = usize::from(self.width);
+        &self.as_u16()[..header]
+    }
+
+    pub fn body(&self) -> &[U16] {
+        let header = usize::from(self.width);
+        println!("IR data size: {:?} {:?}", self.width, self.height);
+        let size = usize::from(self.width) * usize::from(self.height);
+        &self.as_u16()[header..header + size]
+    }
 }
 
 const IR_DATA_FILE: &'static str = "Images/Main/IR.data";
@@ -79,11 +105,11 @@ pub fn extract_ir_data(
     width: u16,
     height: u16,
 ) -> Option<IrData> {
-    let data = files.remove(IR_DATA_FILE)?;
+    let raw = files.remove(IR_DATA_FILE)?;
 
     let header = width as usize;
     let size = width as usize * height as usize;
-    let length_u16 = data.len() / 2;
+    let length_u16 = raw.len() / 2;
     if header + size != length_u16 {
         warn!(
             "IR data of wrong size! Expected {:?} = {:?} + {:?} but got {:?}",
@@ -96,10 +122,6 @@ pub fn extract_ir_data(
         return None;
     };
 
-    let ir_data = IrData {
-        data,
-        width,
-        height,
-    };
+    let ir_data = IrData { raw, width, height };
     Some(ir_data)
 }
