@@ -7,6 +7,7 @@ Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/e
 ## Features
 
 * Export to kelvin
+* Access standard Fluke markers
 
 ## Supported cameras
 
@@ -18,11 +19,13 @@ this library can be tested against them and be improved.
 
 ## TODO
 
+* [x] Expose markers
+* [x] Support is2 zip format
+* [ ] Support is2 blob format
+* [ ] Validate against more camera models (share samples!)
 * [ ] Expose visual light imagery
 * [ ] Expose metadata (camera info, exif if any, ...)
-* [x] Expose markers
 * [ ] CLI to export temperatures to file
-* [ ] Support more camera models (share samples!)
 
 ## Example
 
