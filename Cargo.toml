@@ -1,0 +1,16 @@
+[package]
+name = "serendip"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "serendip"
+path = "src/serendip.rs"
+
+[[bin]]
+name = "serendip"
+path = "src/main.rs"
+
+[dependencies]
+
+zip = "2"
