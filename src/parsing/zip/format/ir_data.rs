@@ -44,6 +44,7 @@ impl IrData {
         let raw_bands = curve.get_raw_bands();
         let raw_data = self.body();
 
+        let background_kelvin = params.background_temperature + 273.15; // C to K
         let kelvin = raw_data.iter().map(|raw| {
             let raw = f32::from(raw.get());
             let maybe_band = raw_bands.iter().find(|b| (b[0]..b[1]).contains(&raw));
@@ -57,7 +58,7 @@ impl IrData {
                     let apparent_temp = apparent_temp + 273.15;
 
                     let term1 = apparent_temp.powi(4)
-                        - (1.0 - params.emissivity) * params.background_temperature.powi(4);
+                        - (1.0 - params.emissivity) * background_kelvin.powi(4);
                     let term2 = params.transmission * params.emissivity;
                     (term1 / term2).powf(0.25)
                 }
