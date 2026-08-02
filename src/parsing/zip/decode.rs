@@ -4,9 +4,9 @@ use std::io::{Cursor, Read};
 use log::debug;
 use zip::ZipArchive;
 
+use crate::markers::Marker;
 use crate::parsing::zip::format::{
-    CalibrationData, CameraInfo, IrData, IrImageInfo, extract_calibration_data,
-    extract_camera_info, extract_ir_data, extract_ir_dimensions, extract_ir_image_info,
+    CalibrationData, CameraInfo, IrData, IrImageInfo, extract_calibration_data, extract_camera_info, extract_ir_data, extract_ir_dimensions, extract_ir_image_info, extract_markers
 };
 
 #[derive(Clone, Debug)]
@@ -15,6 +15,7 @@ pub struct SerendipZip  {
     pub ir_image_info: IrImageInfo,
     pub camera_info: CameraInfo,
     pub calibration_data: CalibrationData,
+    pub markers: Vec<Marker>,
 }
 
 impl SerendipZip {
@@ -62,7 +63,9 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
     let calibration_data = extract_calibration_data(&files)?;
     debug!("CalibrationData: {calibration_data:?}");
     let ir_data = extract_ir_data(&mut files, width, height)?;
-    Some(SerendipZip { ir_data, ir_image_info, camera_info, calibration_data })
+    let markers = extract_markers(&mut files);
+    debug!("Markers: {markers:?}");
+    Some(SerendipZip { ir_data, ir_image_info, camera_info, calibration_data, markers })
 }
 
 fn unzip(bytes: &[u8]) -> zip::result::ZipResult<HashMap<String, Vec<u8>>> {

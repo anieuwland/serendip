@@ -1,7 +1,8 @@
 use std::io;
 use std::path::Path;
 
-mod parsing;
+pub mod parsing;
+pub mod markers;
 
 use parsing::zip::SerendipZip;
 use parsing::{decode_blob_format, decode_zip_format};

@@ -2,7 +2,7 @@ Serendip
 --------
 
 Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/en/apps/eu.nimmerfort.blackbody),
-[Windows](https://bitbucket.org/nimmerwoner/blackbody/downloads/)) to read and reader Fluke files.
+[Windows](https://bitbucket.org/nimmerwoner/blackbody/downloads/)) to read and render Fluke files.
 
 ## Features
 
@@ -12,15 +12,16 @@ Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/e
 
 * Ti400, Ti401p
 
-_**Request for help**_: Please share any is2 files of cameras not listed below so 
+_**Request for help**_: Please share any is2 files of cameras not listed above so 
 this library can be tested against them and be improved.
 
 ## TODO
 
 * [ ] Expose visual light imagery
 * [ ] Expose metadata (camera info, exif if any, ...)
-* [ ] Expose markers
+* [x] Expose markers
 * [ ] CLI to export temperatures to file
+* [ ] Support more camera models (share samples!)
 
 ## Example
 
