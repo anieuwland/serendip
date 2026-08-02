@@ -1,11 +1,26 @@
 Serendip
 --------
 
-Serendip is a rust library to read Fluke thermal imagery.
+Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/en/apps/eu.nimmerfort.blackbody),
+[Windows](https://bitbucket.org/nimmerwoner/blackbody/downloads/)) to read and reader Fluke files.
 
-## Format documentation
+## Features
 
-Fluke publishes no documentation for the `.is2` format. An unofficial specification, compiled from the prior art below, is maintained in [`docs/is2-format.md`](docs/is2-format.md).
+* Export to kelvin
+
+## Supported cameras
+
+*Request for help*: Please share any is2 files of cameras not listed below so 
+this library can be tested against them and be improved.
+
+* Ti400, Ti401p
+
+## TODO
+
+* [ ] Expose visual light imagery
+* [ ] Expose metadata (camera info, exif if any, ...)
+* [ ] Expose markers
+* [ ] CLI to export temperatures to file
 
 ## Prior art
 
@@ -14,3 +29,4 @@ Fluke publishes no documentation for the `.is2` format. An unofficial specificat
 * **[goconvertis2](https://github.com/weisskopfjens/goconvertis2)**. A Go command-line tool and package extracting visible and infrared images from `.is2` files. Handles both format generations: the older monolithic binary format and the newer ZIP-based container. Temperature values reportedly somewhat inaccurate. MIT licensed.
 * **read-fluke-is2-images-from-is3**. An older, oft-forked community script for reading `.is2` files. [BaurA's GitLab fork](https://gitlab.com/BaurA/read-fluke-is2-images-from-is3) extends it to read `.is2` frames extracted from `.is3` videos via Fluke Connect.
 * **[EEVblog forum threads](https://www.eevblog.com/forum/testgear/fluke-vt02-is2-file-format-specification/)**. Reverse-engineering discussion (VT02, Ti-series) going back to 2014.
+* **[JackieHanLab/ThermoFace](https://github.com/JackieHanLab/ThermoFace)**. Contains pre-processing code for Fluke Ti401 Pro imagery.
