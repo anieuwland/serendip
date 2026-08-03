@@ -57,7 +57,7 @@ use serendip::SerendipThermogram;
 let file_path = "thermograms/fluke_ti400_3.is2"
 let Ok(thermogram) = SerendipThermogram::new_from_path(Path::new(&file_path));
 let visuals = thermogram.visuals(); // Raw encoded bytes
-let decoded = thermogram.visual_decoded(); // Get image decoded
+let decoded = thermogram.visual(); // Deterministically get 1 image
 ```
 
 ## Prior art
