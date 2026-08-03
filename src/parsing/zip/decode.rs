@@ -8,7 +8,7 @@ use crate::markers::Marker;
 use crate::parsing::zip::format::{
     CAL_TEMP_DATA_REX_FILE, CalibrationData, CameraInfo, IrData, IrImageInfo, Rex,
     extract_calibration_data, extract_camera_info, extract_ir_data, extract_ir_dimensions,
-    extract_ir_image_info, extract_markers, extract_rex,
+    extract_ir_image_info, extract_markers, extract_rex, extract_visuals,
 };
 
 #[derive(Clone, Debug)]
@@ -18,6 +18,7 @@ pub struct SerendipZip {
     pub camera_info: CameraInfo,
     pub calibration_data: CalibrationData,
     pub markers: Vec<Marker>,
+    pub visuals: HashMap<String, Vec<u8>>,
 }
 
 /// The thermal data, whose storage can differ per model.
@@ -69,12 +70,14 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
     let thermal = extract_thermal_data(&mut files, &ir_image_info)?;
     let markers = extract_markers(&mut files);
     debug!("Markers: {markers:?}");
+    let visuals = extract_visuals(&mut files);
     Some(SerendipZip {
         thermal,
         ir_image_info,
         camera_info,
         calibration_data,
         markers,
+        visuals,
     })
 }
 
@@ -319,5 +322,13 @@ mod tests {
                 "{name}: {max} vs {scale_max}"
             );
         }
+    }
+
+    #[test]
+    fn ti400_visuals_present() {
+        let thermogram = decode_sample("fluke_ti400_1");
+        assert_eq!(thermogram.visuals.len(), 2);
+        assert!(thermogram.visuals.contains_key("Images/Main/028001E0.jpg"));
+        assert!(thermogram.visuals.contains_key("Images/Main/050003C0.jpg"));
     }
 }
