@@ -9,6 +9,7 @@ use parsing::zip::SerendipZip;
 use parsing::{decode_blob_format, decode_zip_format};
 
 use crate::SerendipThermogram::Zip;
+use crate::parsing::zip::format::IrImageInfo;
 
 #[derive(Clone, Debug)]
 pub enum SerendipThermogram {
@@ -44,6 +45,12 @@ impl SerendipThermogram {
     pub fn visuals(&self) -> &HashMap<String, Vec<u8>> {
         match self {
             Zip(t) => &t.visuals
+        }
+    }
+
+    pub fn ir_image_info(&self) -> &IrImageInfo {
+        match self {
+            Zip(t) => &t.ir_image_info
         }
     }
 

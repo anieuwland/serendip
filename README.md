@@ -23,9 +23,12 @@ this library can be tested against them and be improved.
 * [x] Expose markers
 * [x] Support is2 zip format
 * [x] Expose visual light imagery
+* [-] Expose metadata (camera info, exif if any, ...)
+  * [x] Infrared parameters (`ir_image_info`)
+  * [ ] Visible light parameters
+  * [ ] Camera make and model
 * [ ] Support is2 blob format
 * [ ] Validate against more camera models (share samples!)
-* [ ] Expose metadata (camera info, exif if any, ...)
 * [ ] CLI to export temperatures to file
 
 ## Example
