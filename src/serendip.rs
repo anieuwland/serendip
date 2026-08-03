@@ -69,6 +69,7 @@ impl SerendipThermogram {
     /// # Returns
     /// A tuple of (width, height, image).
     pub fn visual_decoded(&self) -> Option<Visual> {
+        // FIXME: Probably doesn't belong in this crate, but in libblackbody
         debug!("Decoding visual image");
         let bytes = self.visual()?;
         let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGB);

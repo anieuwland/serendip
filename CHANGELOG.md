@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# Unreleased
+
+* Embedded visual light images now also exposed
+
 # v0.2.0 (2026-08-02)
 
 * Support for TiS75+

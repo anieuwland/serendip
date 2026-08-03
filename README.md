@@ -8,6 +8,7 @@ Read Fluke is2 thermal imagery. Used by Blackbody ([Linux](https://flathub.org/e
 
 * Export to kelvin
 * Access standard Fluke markers
+* Access the visual light images
 
 ## Supported cameras
 
@@ -21,13 +22,15 @@ this library can be tested against them and be improved.
 
 * [x] Expose markers
 * [x] Support is2 zip format
+* [x] Expose visual light imagery
 * [ ] Support is2 blob format
 * [ ] Validate against more camera models (share samples!)
-* [ ] Expose visual light imagery
 * [ ] Expose metadata (camera info, exif if any, ...)
 * [ ] CLI to export temperatures to file
 
 ## Example
+
+### Read a Fluke thermogram
 
 ```rust
 use serendip::SerendipThermogram::{self, Zip};
@@ -44,6 +47,17 @@ match SerendipThermogram::new_from_path(Path::new(&file_path)) {
         ExitCode::FAILURE
     }
 }
+```
+
+### Access visual lights images
+
+```rust
+use serendip::SerendipThermogram;
+
+let file_path = "thermograms/fluke_ti400_3.is2"
+let Ok(thermogram) = SerendipThermogram::new_from_path(Path::new(&file_path));
+let visuals = thermogram.visuals(); // Raw encoded bytes
+let decoded = thermogram.visual_decoded(); // Get image decoded
 ```
 
 ## Prior art
