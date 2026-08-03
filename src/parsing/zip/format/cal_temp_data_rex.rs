@@ -65,9 +65,23 @@ impl Rex {
     pub fn kelvin(&self) -> Vec<f32> {
         self.decicelsius
             .iter()
-            .map(|d| *d as f32 / 10.0 + 273.15)
+            .map(|d| decicelsius_to_kelvin(*d))
             .collect()
     }
+
+    /// The temperature in kelvin of the pixel at `(x, y)`, or `None` if
+    /// out of bounds.
+    pub fn kelvin_at(&self, x: u16, y: u16) -> Option<f32> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = usize::from(y) * usize::from(self.width) + usize::from(x);
+        Some(decicelsius_to_kelvin(self.decicelsius[index]))
+    }
+}
+
+fn decicelsius_to_kelvin(decicelsius: i64) -> f32 {
+    decicelsius as f32 / 10.0 + 273.15
 }
 
 /// Extracts and decodes CalTempDataRex.gpbenc from the unzipped files.

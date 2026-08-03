@@ -17,6 +17,10 @@ pub struct SerendipZip {
     pub ir_image_info: IrImageInfo,
     pub camera_info: CameraInfo,
     pub calibration_data: CalibrationData,
+    /// The measurement markers with their coordinates as stored in the
+    /// file: in `IrImageInfo`'s width/height space, which is twice the
+    /// thermal data size. They cannot index the thermal data directly;
+    /// see `Marker::to_thermal_space` or `SerendipThermogram::markers`.
     pub markers: Vec<Marker>,
     pub visuals: HashMap<String, Vec<u8>>,
 }
@@ -41,6 +45,18 @@ impl SerendipZip {
                 ir_data.kelvin(params, curve)
             }
             ThermalData::Rex(rex) => Some(rex.kelvin()),
+        }
+    }
+
+    /// The temperature in kelvin of the pixel at `(x, y)`, or `None` if
+    /// out of bounds or the calibration curve is missing.
+    pub fn kelvin_at(&self, x: u16, y: u16) -> Option<f32> {
+        match &self.thermal {
+            ThermalData::IrData(ir_data) => {
+                let curve = self.calibration_data.curve.as_ref()?;
+                ir_data.kelvin_at(x, y, &self.ir_image_info, curve)
+            }
+            ThermalData::Rex(rex) => rex.kelvin_at(x, y),
         }
     }
 
@@ -127,18 +143,10 @@ mod tests {
         decode_zip_format(&bytes).expect("decodes")
     }
 
-    /// The kelvin value at a marker's position. Marker coordinates are in
-    /// IRImageInfo's width/height space, twice the IR size on a TiS75+.
-    fn kelvin_at(t: &SerendipZip, kelvin: &[f32], coords: &Point) -> f32 {
-        let x = coords.x as usize / 2;
-        let y = coords.y as usize / 2;
-        kelvin[y * usize::from(t.width()) + x]
-    }
-
-    fn marker_coords<'a>(t: &'a SerendipZip, label: &str) -> &'a Point {
+    fn marker_coords(t: &SerendipZip, label: &str) -> Point {
         t.markers
             .iter()
-            .find_map(|m| match m {
+            .find_map(|m| match m.to_thermal_space(t.width(), t.height()) {
                 Marker::Point { coords, metadata } if metadata.label2 == label => Some(coords),
                 _ => None,
             })
@@ -190,10 +198,32 @@ mod tests {
             let min = kelvin.iter().copied().fold(f32::INFINITY, f32::min);
             let max = kelvin.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 
-            let hot = kelvin_at(&t, &kelvin, marker_coords(&t, "Hotpoint"));
-            let cold = kelvin_at(&t, &kelvin, marker_coords(&t, "Coldpoint"));
-            assert_eq!(hot, max, "{name}");
-            assert_eq!(cold, min, "{name}");
+            let at = |label| {
+                let Point { x, y } = marker_coords(&t, label);
+                t.kelvin_at(x as u16, y as u16).expect("in bounds")
+            };
+            assert_eq!(at("Hotpoint"), max, "{name}");
+            assert_eq!(at("Coldpoint"), min, "{name}");
+        }
+    }
+
+    /// `kelvin_at` must agree with the full `kelvin()` buffer on both
+    /// thermal layouts, and reject out-of-bounds coordinates.
+    #[test]
+    fn kelvin_at_matches_full_decode() {
+        // Ti400: IrData; TiS75+: Rex
+        for name in ["fluke_ti400_1", "fluke_tis75_1"] {
+            let t = decode_sample(name);
+            let kelvin = t.kelvin().expect("kelvin");
+            let (w, h) = (t.width(), t.height());
+
+            for (x, y) in [(0, 0), (w / 2, h / 2), (w - 1, h - 1)] {
+                let expected = kelvin[usize::from(y) * usize::from(w) + usize::from(x)];
+                assert_eq!(t.kelvin_at(x, y), Some(expected), "{name} at ({x}, {y})");
+            }
+
+            assert_eq!(t.kelvin_at(w, 0), None, "{name}");
+            assert_eq!(t.kelvin_at(0, h), None, "{name}");
         }
     }
 

@@ -44,30 +44,48 @@ impl IrData {
         let raw_bands = curve.get_raw_bands();
         let raw_data = self.body();
 
-        let background_kelvin = params.background_temperature + 273.15; // C to K
-        let kelvin = raw_data.iter().map(|raw| {
-            let raw = f32::from(raw.get());
-            let maybe_band = raw_bands.iter().find(|b| (b[0]..b[1]).contains(&raw));
-            match maybe_band {
-                Some(band) => {
-                    let a = band[2];
-                    let b = band[3];
-                    let c = band[4];
-
-                    let apparent_temp = (-b + f32::sqrt(b * b - 4.0 * a * (c - raw))) / (2.0 * a);
-                    let apparent_temp = apparent_temp + 273.15;
-
-                    let term1 = apparent_temp.powi(4)
-                        - (1.0 - params.emissivity) * background_kelvin.powi(4);
-                    let term2 = params.transmission * params.emissivity;
-                    (term1 / term2).powf(0.25)
-                }
-                None => f32::NAN,
-            }
-        });
-
+        let kelvin = raw_data
+            .iter()
+            .map(|raw| raw_to_kelvin(f32::from(raw.get()), &raw_bands, params));
         Some(kelvin.collect())
     }
+
+    /// The temperature in kelvin of the pixel at `(x, y)`, or `None` if
+    /// out of bounds. NaN for raw counts outside all calibration bands,
+    /// like `kelvin`.
+    pub fn kelvin_at(
+        &self,
+        x: u16,
+        y: u16,
+        params: &IrImageInfo,
+        curve: &CalibrationCurve,
+    ) -> Option<f32> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = usize::from(y) * usize::from(self.width) + usize::from(x);
+        let raw = f32::from(self.body()[index].get());
+        Some(raw_to_kelvin(raw, &curve.get_raw_bands(), params))
+    }
+}
+
+/// Converts one raw sensor count to kelvin (see `IrData::kelvin`), or NaN
+/// if the count falls outside all calibration bands.
+fn raw_to_kelvin(raw: f32, raw_bands: &[[f32; 5]], params: &IrImageInfo) -> f32 {
+    let Some(band) = raw_bands.iter().find(|b| (b[0]..b[1]).contains(&raw)) else {
+        return f32::NAN;
+    };
+    let a = band[2];
+    let b = band[3];
+    let c = band[4];
+
+    let apparent_temp = (-b + f32::sqrt(b * b - 4.0 * a * (c - raw))) / (2.0 * a);
+    let apparent_temp = apparent_temp + 273.15;
+
+    let background_kelvin = params.background_temperature + 273.15; // C to K
+    let term1 = apparent_temp.powi(4) - (1.0 - params.emissivity) * background_kelvin.powi(4);
+    let term2 = params.transmission * params.emissivity;
+    (term1 / term2).powf(0.25)
 }
 
 const IR_DATA_FILE: &'static str = "Images/Main/IR.data";

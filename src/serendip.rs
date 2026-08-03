@@ -9,6 +9,7 @@ use parsing::zip::SerendipZip;
 use parsing::{decode_blob_format, decode_zip_format};
 
 use crate::SerendipThermogram::Zip;
+use crate::markers::Marker;
 use crate::parsing::zip::format::IrImageInfo;
 
 #[derive(Clone, Debug)]
@@ -41,16 +42,43 @@ impl SerendipThermogram {
         }
     }
 
+    /// The temperature in kelvin of the pixel at `(x, y)`, or `None` if
+    /// out of bounds or the file lacks the data to compute it.
+    pub fn kelvin_at(&self, x: u16, y: u16) -> Option<f32> {
+        match self {
+            Zip(t) => t.kelvin_at(x, y),
+        }
+    }
+
     /// Returns the set of encoded images present in this is2.
     pub fn visuals(&self) -> &HashMap<String, Vec<u8>> {
         match self {
-            Zip(t) => &t.visuals
+            Zip(t) => &t.visuals,
         }
     }
 
     pub fn ir_image_info(&self) -> &IrImageInfo {
         match self {
-            Zip(t) => &t.ir_image_info
+            Zip(t) => &t.ir_image_info,
+        }
+    }
+
+    /// The embedded measurement markers. Their coordinates index the
+    /// thermal data directly.
+    ///
+    /// Note that this differs from how the file stores them; for those
+    /// raw coordinates, see `SerendipZip::markers`.
+    pub fn markers(&self) -> Vec<Marker> {
+        let (width, height) = (self.width(), self.height());
+        match self {
+            // `SerendipZip::markers` stores marker coordinates in a space
+            // twice the thermal data size; this projects them onto the thermal
+            // array so they can index it directly.
+            Zip(t) => t
+                .markers
+                .iter()
+                .map(|m| m.to_thermal_space(width, height))
+                .collect(),
         }
     }
 
@@ -92,7 +120,10 @@ mod tests {
         let t = decode_sample("fluke_ti400_1");
 
         let visual = t.visual().expect("visual present");
-        let expected = t.visuals().get("Images/Main/028001E0.jpg").expect("main jpg present");
+        let expected = t
+            .visuals()
+            .get("Images/Main/028001E0.jpg")
+            .expect("main jpg present");
         assert_eq!(visual, expected);
         assert!(visual.starts_with(&[0xFF, 0xD8])); // JPEG SOI marker
     }
