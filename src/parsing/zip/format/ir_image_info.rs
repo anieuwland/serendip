@@ -10,7 +10,7 @@ use prost::Message;
 const IR_IMAGE_INFO_FILE: &'static str = "Images/Main/IRImageInfo.gpbenc";
 
 /// Thermal parameters of the IR capture.
-#[derive(Clone, PartialEq, Message)]
+#[derive(Copy, Clone, PartialEq, Message)]
 pub struct IrImageInfo {
     #[prost(uint32, tag = "4")]
     pub width: u32, // Unclear what coordinate space; not 1-to-1 IR data size
@@ -44,7 +44,7 @@ impl IrImageInfo {
 }
 
 /// The temperature range of the display palette, presumably Celsius.
-#[derive(Clone, PartialEq, Message)]
+#[derive(Copy, Clone, PartialEq, Message)]
 pub struct TemperatureScale {
     #[prost(float, tag = "6")]
     pub min: f32,

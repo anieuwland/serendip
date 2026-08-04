@@ -46,7 +46,7 @@ impl CalibrationCurve {
 }
 
 /// One temperature band and its quadratic coefficients.
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, Copy, PartialEq, Message)]
 pub struct CalibrationBand {
     #[prost(float, tag = "1")]
     pub from: f32,
