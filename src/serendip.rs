@@ -63,6 +63,13 @@ impl SerendipThermogram {
         }
     }
 
+    /// Palette in ARGB.
+    pub fn palette(&self) -> Option<&[[u8; 4]]> {
+        match self {
+            Zip(t) => t.palette(),
+        }
+    }
+
     /// The embedded measurement markers. Their coordinates index the
     /// thermal data directly.
     ///

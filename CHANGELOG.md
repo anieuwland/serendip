@@ -4,6 +4,7 @@ CHANGELOG
 # Unreleased
 
 * Embedded visual light images now also exposed
+* Palette extraction for is2 files if CalTempDataRex files (Tis75)
 
 # v0.2.0 (2026-08-02)
 

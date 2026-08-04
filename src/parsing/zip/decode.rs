@@ -73,6 +73,14 @@ impl SerendipZip {
             ThermalData::Rex(rex) => rex.height,
         }
     }
+
+    /// Palette in ARGB.
+    pub fn palette(&self) -> Option<&[[u8; 4]]> {
+        match &self.thermal {
+            ThermalData::IrData(_) => None,
+            ThermalData::Rex(rex) => rex.palette.as_deref(),
+        }
+    }
 }
 
 pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
@@ -107,10 +115,12 @@ fn extract_thermal_data(
     ir_image_info: &IrImageInfo,
 ) -> Option<ThermalData> {
     if files.contains_key(CAL_TEMP_DATA_REX_FILE) {
+        debug!("Extracting using CalTempDataRex file");
         return extract_rex(files, ir_image_info).map(ThermalData::Rex);
     }
 
     let (width, height) = extract_ir_dimensions(files, ir_image_info)?;
+    debug!("Extracting using IrData");
     debug!("Dimensions: {width} x {height}");
     extract_ir_data(files, width, height).map(ThermalData::IrData)
 }
@@ -352,6 +362,22 @@ mod tests {
                 "{name}: {max} vs {scale_max}"
             );
         }
+    }
+
+    #[test]
+    fn tis75_palette_present() {
+        let t = decode_sample("fluke_tis75_1");
+        let palette = t.palette().expect("palette present");
+        assert_eq!(palette.len(), 256);
+    }
+
+    /// IrData-based files carry no palette; `palette()` must say so
+    /// rather than fail.
+    #[test]
+    fn ti400_has_no_palette() {
+        let t = decode_sample("fluke_ti400_1");
+        assert!(matches!(t.thermal, ThermalData::IrData(_)));
+        assert_eq!(t.palette(), None);
     }
 
     #[test]
