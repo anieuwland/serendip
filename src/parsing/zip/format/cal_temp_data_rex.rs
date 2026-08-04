@@ -4,7 +4,8 @@
 //! The file is a protobuf whose submessage 4 holds three repeated fields:
 //!
 //! - tag 4: a 16384-entry monotone lookup table, presumed the camera's
-//!   counts-to-temperature curve, in decicelsius.
+//!   counts-to-temperature curve, in decicelsius. Not decoded; see the
+//!   commented-out `lut` field.
 //! - tag 11: the thermal data, width × height signed varints. These are
 //!   **already temperatures in decicelsius**, not raw counts: verified on
 //!   four TiS75+ samples, where the embedded hotpoint and coldpoint
@@ -33,21 +34,41 @@ struct CalTempDataRex {
 }
 
 /// Wire form of the thermal data submessage.
+///
+/// The wire carries sign-extended 64-bit varints, but every value fits in
+/// 32 bits, so fields decode as `int32`: prost truncates the varint,
+/// which for sign-extended values is lossless.
 #[derive(Clone, PartialEq, Message)]
 struct RexThermalData {
-    /// Counts-to-decicelsius lookup table. Not needed to get temperatures
-    /// (the thermal data is already converted) but kept as format
-    /// documentation.
-    #[prost(int64, repeated, tag = "4")]
-    lut: Vec<i64>,
+    // Counts-to-decicelsius lookup table. Not needed to get temperatures
+    // (the thermal data is already converted), and declaring the field
+    // would make prost allocate 16384 entries per decode just to drop
+    // them. Kept commented out as format documentation.
+    // #[prost(int32, repeated, tag = "4")]
+    // lut: Vec<i32>,
     /// The thermal data, row-major, in decicelsius.
-    #[prost(int64, repeated, tag = "11")]
-    decicelsius: Vec<i64>,
+    #[prost(int32, repeated, tag = "11")]
+    decicelsius: Vec<i32>,
     /// The display palette: one varint per color, an ARGB `u32`
-    /// sign-extended to 64 bits (e.g. -16777216 = 0xFF000000, opaque
-    /// black).
-    #[prost(int64, repeated, tag = "12")]
-    palette: Vec<i64>,
+    /// (e.g. -16777216 = 0xFF000000, opaque black).
+    #[prost(int32, repeated, tag = "12")]
+    palette: Vec<i32>,
+}
+
+/// A palette color as `[alpha, red, green, blue]` bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Argb(pub [u8; 4]);
+
+impl Argb {
+    pub fn alpha(self) -> u8 {
+        self.0[0]
+    }
+
+    /// The color without its alpha channel, as `[red, green, blue]`.
+    pub fn rgb(self) -> [u8; 3] {
+        let [_, r, g, b] = self.0;
+        [r, g, b]
+    }
 }
 
 /// The thermal data of a Rex-family thermogram.
@@ -58,11 +79,9 @@ pub struct Rex {
     /// Format notes suggest −1 may be an invalid-pixel sentinel on some
     /// models, but it is indistinguishable from a legitimate −0.1 °C and
     /// is therefore treated as a temperature.
-    pub decicelsius: Vec<i64>,
+    pub decicelsius: Vec<i32>,
     pub width: u16,
     pub height: u16,
-    /// The palette in [a, r, g, b] colors.
-    pub palette: Option<Vec<[u8; 4]>>,
 }
 
 impl Rex {
@@ -88,23 +107,29 @@ impl Rex {
     }
 }
 
-/// Decodes the palette field: each entry is an ARGB `u32` sign-extended
-/// to an `i64`, returned as `[a, r, g, b]`.
-fn decode_palette(palette: &[i64]) -> Option<Vec<[u8; 4]>> {
+/// Decodes the palette field: each entry is an ARGB `u32` on the wire.
+fn decode_palette(palette: &[i32]) -> Option<Vec<Argb>> {
     debug!("Decoding palette embedded in CalTempDataRex");
     if palette.is_empty() {
         debug!("No palette present");
         return None;
     }
 
-    Some(palette.iter().map(|c| (*c as u32).to_be_bytes()).collect())
+    Some(
+        palette
+            .iter()
+            .map(|c| Argb((*c as u32).to_be_bytes()))
+            .collect(),
+    )
 }
 
-fn decicelsius_to_kelvin(decicelsius: i64) -> f32 {
+fn decicelsius_to_kelvin(decicelsius: i32) -> f32 {
     decicelsius as f32 / 10.0 + 273.15
 }
 
-/// Extracts and decodes CalTempDataRex.gpbenc from the unzipped files.
+/// Extracts and decodes CalTempDataRex.gpbenc from the unzipped files,
+/// yielding the thermal data and, when present, the display palette the
+/// file stores alongside it.
 ///
 /// Needs `mut` because it takes ownership of the file and removes it from
 /// the hash map, so the (sizeable) raw bytes are dropped after decoding.
@@ -115,7 +140,7 @@ fn decicelsius_to_kelvin(decicelsius: i64) -> f32 {
 pub fn extract_rex(
     files: &mut HashMap<String, Vec<u8>>,
     ir_image_info: &IrImageInfo,
-) -> Option<Rex> {
+) -> Option<(Rex, Option<Vec<Argb>>)> {
     let bytes = files.remove(CAL_TEMP_DATA_REX_FILE)?;
     let rex = CalTempDataRex::decode(bytes.as_slice())
         .inspect_err(|e| warn!("Could not decode {CAL_TEMP_DATA_REX_FILE}: {e}"))
@@ -132,12 +157,13 @@ pub fn extract_rex(
         return None;
     }
 
-    Some(Rex {
+    let palette = decode_palette(&thermal.palette);
+    let rex = Rex {
         decicelsius: thermal.decicelsius,
         width,
         height,
-        palette: decode_palette(&thermal.palette),
-    })
+    };
+    Some((rex, palette))
 }
 
 #[cfg(test)]
@@ -163,7 +189,7 @@ mod tests {
 
     #[test]
     fn decodes_tis75_sample() {
-        let rex = extract_rex(&mut tis75_files(), &tis75_ir_image_info()).expect("decodes");
+        let (rex, _) = extract_rex(&mut tis75_files(), &tis75_ir_image_info()).expect("decodes");
 
         assert_eq!(rex.width, 384);
         assert_eq!(rex.height, 288);
@@ -178,13 +204,14 @@ mod tests {
 
     #[test]
     fn decodes_tis75_palette() {
-        let rex = extract_rex(&mut tis75_files(), &tis75_ir_image_info()).expect("decodes");
+        let (_, palette) =
+            extract_rex(&mut tis75_files(), &tis75_ir_image_info()).expect("decodes");
 
-        let palette = rex.palette.expect("palette present");
+        let palette = palette.expect("palette present");
         assert_eq!(palette.len(), 256);
         // Every entry is fully opaque, starting at black
-        assert!(palette.iter().all(|[a, ..]| *a == 0xFF));
-        assert_eq!(palette[0], [0xFF, 0x00, 0x00, 0x00]);
+        assert!(palette.iter().all(|c| c.alpha() == 0xFF));
+        assert_eq!(palette[0], Argb([0xFF, 0x00, 0x00, 0x00]));
     }
 
     #[test]
@@ -198,7 +225,6 @@ mod tests {
             decicelsius: vec![0, 227, -160],
             width: 3,
             height: 1,
-            palette: None,
         };
         let kelvin = rex.kelvin();
         assert!((kelvin[0] - 273.15).abs() < 1e-3);

@@ -6,7 +6,7 @@ use zip::ZipArchive;
 
 use crate::markers::Marker;
 use crate::parsing::zip::format::{
-    CAL_TEMP_DATA_REX_FILE, CalibrationData, CameraInfo, IrData, IrImageInfo, Rex,
+    Argb, CAL_TEMP_DATA_REX_FILE, CalibrationData, CameraInfo, IrData, IrImageInfo, Rex,
     extract_calibration_data, extract_camera_info, extract_ir_data, extract_ir_dimensions,
     extract_ir_image_info, extract_markers, extract_rex, extract_visuals,
 };
@@ -23,6 +23,9 @@ pub struct SerendipZip {
     /// see `Marker::to_thermal_space` or `SerendipThermogram::markers`.
     pub markers: Vec<Marker>,
     pub visuals: HashMap<String, Vec<u8>>,
+    /// The display palette the thermogram was rendered with on-camera.
+    /// Only Rex-family files have been seen carrying one.
+    pub palette: Option<Vec<Argb>>,
 }
 
 /// The thermal data, whose storage can differ per model.
@@ -74,12 +77,9 @@ impl SerendipZip {
         }
     }
 
-    /// Palette in ARGB.
-    pub fn palette(&self) -> Option<&[[u8; 4]]> {
-        match &self.thermal {
-            ThermalData::IrData(_) => None,
-            ThermalData::Rex(rex) => rex.palette.as_deref(),
-        }
+    /// The display palette, if the file carries one.
+    pub fn palette(&self) -> Option<&[Argb]> {
+        self.palette.as_deref()
     }
 }
 
@@ -91,7 +91,7 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
     debug!("CameraInfo: {camera_info:?}");
     let calibration_data = extract_calibration_data(&files)?;
     debug!("CalibrationData: {calibration_data:?}");
-    let thermal = extract_thermal_data(&mut files, &ir_image_info)?;
+    let (thermal, palette) = extract_thermal_data(&mut files, &ir_image_info)?;
     let markers = extract_markers(&mut files);
     debug!("Markers: {markers:?}");
     let visuals = extract_visuals(&mut files);
@@ -102,10 +102,12 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
         calibration_data,
         markers,
         visuals,
+        palette,
     })
 }
 
-/// Extracts the thermal data, in whichever layout the file carries.
+/// Extracts the thermal data, in whichever layout the file carries,
+/// along with the display palette when the layout embeds one (Rex only).
 ///
 /// `CalTempDataRex.gpbenc` is preferred over `IR.data` as its values are
 /// already temperatures, needing no calibration curves. No file has been
@@ -113,16 +115,18 @@ pub fn decode_zip_format(bytes: &[u8]) -> Option<SerendipZip> {
 fn extract_thermal_data(
     files: &mut HashMap<String, Vec<u8>>,
     ir_image_info: &IrImageInfo,
-) -> Option<ThermalData> {
+) -> Option<(ThermalData, Option<Vec<Argb>>)> {
     if files.contains_key(CAL_TEMP_DATA_REX_FILE) {
         debug!("Extracting using CalTempDataRex file");
-        return extract_rex(files, ir_image_info).map(ThermalData::Rex);
+        let (rex, palette) = extract_rex(files, ir_image_info)?;
+        return Some((ThermalData::Rex(rex), palette));
     }
 
     let (width, height) = extract_ir_dimensions(files, ir_image_info)?;
     debug!("Extracting using IrData");
     debug!("Dimensions: {width} x {height}");
-    extract_ir_data(files, width, height).map(ThermalData::IrData)
+    let ir_data = extract_ir_data(files, width, height)?;
+    Some((ThermalData::IrData(ir_data), None))
 }
 
 fn unzip(bytes: &[u8]) -> zip::result::ZipResult<HashMap<String, Vec<u8>>> {

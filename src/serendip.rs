@@ -10,7 +10,7 @@ use parsing::{decode_blob_format, decode_zip_format};
 
 use crate::SerendipThermogram::Zip;
 use crate::markers::Marker;
-use crate::parsing::zip::format::IrImageInfo;
+use crate::parsing::zip::format::{Argb, IrImageInfo};
 
 #[derive(Clone, Debug)]
 pub enum SerendipThermogram {
@@ -63,8 +63,11 @@ impl SerendipThermogram {
         }
     }
 
-    /// Palette in ARGB.
-    pub fn palette(&self) -> Option<&[[u8; 4]]> {
+    /// The display palette the thermogram was rendered with on-camera:
+    /// 256 [`Argb`] colors, index 0 mapping to the coldest displayed
+    /// temperature. Only Rex-family files (TiS75+, ...) have been seen
+    /// carrying one.
+    pub fn palette(&self) -> Option<&[Argb]> {
         match self {
             Zip(t) => t.palette(),
         }
